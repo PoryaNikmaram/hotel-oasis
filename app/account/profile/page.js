@@ -5,7 +5,6 @@ export const metadata = {
 };
 
 export default function Page() {
-  // CHANGE
   const countryFlag = "pt.jpg";
   const nationality = "portugal";
 
