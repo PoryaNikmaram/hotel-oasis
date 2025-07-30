@@ -85,8 +85,8 @@ export default [
     },
     rules: {
       // React specific rules
-      'react/react-in-jsx-scope': 'off', // Not needed in Next.js 13+
-      'react/prop-types': 'off', // Using TypeScript for prop validation
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
       'react/jsx-uses-react': 'off',
       'react/jsx-uses-vars': 'error',
       'react/jsx-key': ['error', { checkFragmentShorthand: true }],
