@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "pre-commit": "lint-staged",
+    "commit-msg": "echo 'Validating commit message...'",
+    "pre-push": "npm run validate && npm run build"
+  },
+  "skipCI": true
+}

@@ -1,0 +1,21 @@
+echo "🔍 Running pre-push checks..."
+
+# Check if we can build the project
+echo "📦 Building project..."
+npm run build
+
+if [ $? -ne 0 ]; then
+    echo "❌ Build failed! Push aborted."
+    exit 1
+fi
+
+# Run full linting and formatting check
+echo "🔍 Running full validation..."
+npm run validate
+
+if [ $? -ne 0 ]; then
+    echo "❌ Validation failed! Push aborted."
+    exit 1
+fi
+
+echo "✅ Pre-push checks passed!"
