@@ -1,5 +1,5 @@
 export const metadata = {
-  tittle: "Guest area",
+  tittle: 'Guest area'
 };
 
 export default function Accounts() {
