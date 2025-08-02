@@ -46,22 +46,15 @@ jobs:
           # Cache dependencies for faster builds
           cache: 'npm'
 
-      # Step 3: Install dependencies
+      # Step 3: Install dependencies (skip prepare script in CI)
       - name: Install Dependencies
         run: |
           echo "📦 Installing dependencies..."
-          npm ci --prefer-offline --no-audit
+          npm ci --prefer-offline --no-audit --ignore-scripts
           # Install sharp for Next.js image optimization
           npm install sharp
 
-      # Step 4: Install Husky
-      - name: Install Husky
-        run: |
-          echo "🐶 Setting up Husky..."
-          npm install husky --save-dev
-          npx husky init
-
-      # Step 5: Run ESLint
+      # Step 4: Run ESLint
       - name: Run ESLint
         run: |
           echo "🔍 Running ESLint..."
@@ -71,13 +64,13 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      # Step 6: Check Prettier formatting
+      # Step 5: Check Prettier formatting
       - name: Check Code Formatting
         run: |
           echo "✨ Checking code formatting..."
           npm run format:check
 
-      # Step 7: Security audit
+      # Step 6: Security audit
       - name: Security Audit
         run: |
           echo "🔒 Running security audit..."
@@ -103,15 +96,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          npm ci --prefer-offline --no-audit
+          npm ci --prefer-offline --no-audit --ignore-scripts
           # Install sharp for production image optimization
           npm install sharp
-
-      - name: Install Husky
-        run: |
-          echo "🐶 Setting up Husky..."
-          npm install husky --save-dev
-          npx husky init
 
       # Step: Build the Next.js application
       - name: Build Application
@@ -180,7 +167,7 @@ jobs:
           name: build-files
 
       - name: Install Dependencies
-        run: npm ci --prefer-offline --no-audit --omit=dev
+        run: npm ci --prefer-offline --no-audit --omit=dev --ignore-scripts
 
       # Example deployment to Vercel
       # You'll need to add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID to GitHub secrets
@@ -230,6 +217,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-files
+
+      - name: Install Dependencies
+        run: npm ci --prefer-offline --no-audit --omit=dev --ignore-scripts
 
       - name: Deploy Preview
         run: |
