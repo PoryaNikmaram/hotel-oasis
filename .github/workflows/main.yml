@@ -54,10 +54,14 @@ jobs:
           # Install sharp for Next.js image optimization
           npm install sharp
 
+      # Step 4: Install Husky
       - name: Install Husky
-        run: npx husky install
+        run: |
+          echo "🐶 Setting up Husky..."
+          npm install husky --save-dev
+          npx husky init
 
-      # Step 4: Run ESLint
+      # Step 5: Run ESLint
       - name: Run ESLint
         run: |
           echo "🔍 Running ESLint..."
@@ -67,13 +71,13 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      # Step 5: Check Prettier formatting
+      # Step 6: Check Prettier formatting
       - name: Check Code Formatting
         run: |
           echo "✨ Checking code formatting..."
           npm run format:check
 
-      # Step 8: Security audit
+      # Step 7: Security audit
       - name: Security Audit
         run: |
           echo "🔒 Running security audit..."
@@ -104,7 +108,10 @@ jobs:
           npm install sharp
 
       - name: Install Husky
-        run: npx husky install
+        run: |
+          echo "🐶 Setting up Husky..."
+          npm install husky --save-dev
+          npx husky init
 
       # Step: Build the Next.js application
       - name: Build Application
@@ -174,9 +181,6 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci --prefer-offline --no-audit --omit=dev
-
-      - name: Install Husky
-        run: npx husky install
 
       # Example deployment to Vercel
       # You'll need to add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID to GitHub secrets
