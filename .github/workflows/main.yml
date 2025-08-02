@@ -53,12 +53,14 @@ jobs:
           npm ci --prefer-offline --no-audit --ignore-scripts
           # Install sharp for Next.js image optimization
           npm install sharp
+          # Verify eslint installation
+          npx eslint --version
 
       # Step 4: Run ESLint
       - name: Run ESLint
         run: |
           echo "🔍 Running ESLint..."
-          npm run lint:check
+          npx eslint .
         env:
           # Environment variables needed for linting
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -68,7 +70,7 @@ jobs:
       - name: Check Code Formatting
         run: |
           echo "✨ Checking code formatting..."
-          npm run format:check
+          npx prettier --check .
 
       # Step 6: Security audit
       - name: Security Audit
