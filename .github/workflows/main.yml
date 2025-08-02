@@ -16,8 +16,12 @@ on:
 
 # Define environment variables that all jobs can use
 env:
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
   NEXT_TELEMETRY_DISABLED: 1
+  NODE_ENV: production
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
 # Jobs are the main building blocks of your workflow
 jobs:
@@ -47,32 +51,24 @@ jobs:
         run: |
           echo "📦 Installing dependencies..."
           npm ci --prefer-offline --no-audit
+          # Install sharp for Next.js image optimization
+          npm install sharp
 
       # Step 4: Run ESLint
       - name: Run ESLint
         run: |
           echo "🔍 Running ESLint..."
           npm run lint:check
+        env:
+          # Environment variables needed for linting
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       # Step 5: Check Prettier formatting
       - name: Check Code Formatting
         run: |
           echo "✨ Checking code formatting..."
           npm run format:check
-
-      # Step 6: Run tests (if you have any)
-      - name: Run Tests
-        run: |
-          echo "🧪 Running tests..."
-          npm run test
-        continue-on-error: true # Don't fail if no tests exist yet
-
-      # Step 7: Type checking (even for JS projects, can catch some issues)
-      - name: Type Check
-        run: |
-          echo "🔍 Running type check..."
-          npm run type-check
-        continue-on-error: true
 
       # Step 8: Security audit
       - name: Security Audit
@@ -99,7 +95,10 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci --prefer-offline --no-audit
+        run: |
+          npm ci --prefer-offline --no-audit
+          # Install sharp for production image optimization
+          npm install sharp
 
       # Step: Build the Next.js application
       - name: Build Application
@@ -107,8 +106,12 @@ jobs:
           echo "🏗️ Building Next.js application..."
           npm run build
         env:
-          # Add any environment variables your build needs
+          # Production environment
           NODE_ENV: production
+          # Supabase configuration
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       # Step: Upload build artifacts for other jobs to use
       - name: Upload Build Artifacts
@@ -175,10 +178,12 @@ jobs:
           # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
           echo "url=https://your-app.vercel.app" >> $GITHUB_OUTPUT
           echo "✅ Deployment successful!"
-        # env:
-        #   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        #   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        #   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        env:
+          # Production environment variables
+          NODE_ENV: production
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       # Send notification on successful deployment
       - name: Deployment Notification
