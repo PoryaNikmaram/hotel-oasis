@@ -1,0 +1,147 @@
+# Specialized workflow for Pull Request validation
+name: PR Quality Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-validation:
+    name: Validate Pull Request
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          # Fetch PR head and base for comparison
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      # Check if PR title follows conventional commits
+      - name: Validate PR Title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            chore
+            ci
+            build
+            revert
+          requireScope: false
+
+      # Check for sensitive files or large files
+      - name: Check for Sensitive Files
+        run: |
+          echo "🔍 Checking for sensitive files..."
+          if find . -name "*.env*" -not -path "./node_modules/*" | grep -q .; then
+            echo "❌ Environment files found in PR!"
+            exit 1
+          fi
+
+          if find . -name "*.key" -not -path "./node_modules/*" | grep -q .; then
+            echo "❌ Key files found in PR!"
+            exit 1
+          fi
+
+          echo "✅ No sensitive files detected"
+
+      # Check file sizes
+      - name: Check File Sizes
+        run: |
+          echo "📏 Checking for large files..."
+          large_files=$(find . -type f -size +1M -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./.next/*")
+          if [ -n "$large_files" ]; then
+            echo "❌ Large files detected:"
+            echo "$large_files"
+            echo "Consider using Git LFS for large files"
+            exit 1
+          fi
+          echo "✅ No large files detected"
+
+      # Run only on changed files for efficiency
+      - name: Get Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v42
+        with:
+          files: |
+            **/*.{js,jsx,mjs}
+            **/*.{json,md,yml,yaml}
+
+      - name: Lint Changed Files
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "🔍 Linting changed files..."
+          echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
+          npx eslint ${{ steps.changed-files.outputs.all_changed_files }}
+
+      - name: Format Check Changed Files
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "✨ Checking formatting of changed files..."
+          npx prettier --check ${{ steps.changed-files.outputs.all_changed_files }}
+
+      # Comment on PR with results
+      - name: PR Comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('PR Quality Check')
+            );
+
+            const body = `## 🤖 PR Quality Check Results
+
+            **Status:** ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }}
+
+            **Checks Performed:**
+            - PR title format validation
+            - Sensitive files check
+            - Large files check
+            - Code linting on changed files
+            - Code formatting check
+
+            **Files Changed:** ${{ steps.changed-files.outputs.all_changed_files_count || 0 }}
+
+            ---
+            *This comment will be updated automatically on each push*`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
