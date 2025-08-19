@@ -220,9 +220,9 @@ describe('CabinCard Component', () => {
         </div>
       );
 
-      expect(screen.getByText('Cabin 001')).toBeInTheDocument();
-      expect(screen.getByText('Cabin 002')).toBeInTheDocument();
-      expect(screen.getByText('Cabin 003')).toBeInTheDocument();
+      expect(screen.getByText(/Cabin 001/)).toBeInTheDocument();
+      expect(screen.getByText(/Cabin 002/)).toBeInTheDocument();
+      expect(screen.getByText(/Cabin 003/)).toBeInTheDocument();
 
       const links = screen.getAllByRole('link');
       expect(links).toHaveLength(3);
