@@ -1,11 +1,17 @@
 import js from '@eslint/js';
 import { FlatCompat } from '@eslint/eslintrc';
-import path from 'path';
 import { fileURLToPath } from 'url';
-import prettierConfig from 'eslint-config-prettier';
+import path from 'path';
 import globals from 'globals';
 
-// mimic CommonJS variables
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import tailwindcss from 'eslint-plugin-tailwindcss';
+import jest from 'eslint-plugin-jest';
+import playwright from 'eslint-plugin-playwright';
+import prettier from 'eslint-config-prettier';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -15,108 +21,104 @@ const compat = new FlatCompat({
 });
 
 export default [
-  // Ignore patterns
+  // Global ignores
   {
     ignores: [
-      '.next/**/*',
-      'node_modules/**/*',
-      'out/**/*',
-      'build/**/*',
-      'dist/**/*',
-      'coverage/**/*',
-      '.husky/**/*',
-      'public/**/*',
+      '.next/**',
+      'out/**',
+      'build/**',
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
+      '.eslintcache',
+      '*.log',
       '*.config.js',
       '*.config.mjs',
-      '*.config.ts',
-      '.eslintrc*'
+      '*.config.ts'
     ]
   },
 
   // Base JavaScript configuration
   js.configs.recommended,
 
-  // Next.js and React configurations
-  ...compat.extends(
-    'next/core-web-vitals',
-    'plugin:react/recommended',
-    'plugin:react-hooks/recommended'
-  ),
+  // Next.js configuration
+  ...compat.extends('next/core-web-vitals'),
 
-  // Prettier configuration (should be last)
-  prettierConfig,
-
-  // Custom configuration
+  // Global language options & settings
   {
-    files: ['**/*.{js,mjs,cjs,jsx}'],
     languageOptions: {
-      ecmaVersion: 2024,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.es2021
+      },
+      ecmaVersion: 'latest',
       sourceType: 'module',
       parserOptions: {
         ecmaFeatures: {
           jsx: true
         }
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-        ...globals.es2021,
-        React: 'readonly',
-        JSX: 'readonly'
       }
     },
     settings: {
-      react: {
-        version: 'detect'
-      },
+      react: { version: 'detect' },
       'import/resolver': {
         node: {
           extensions: ['.js', '.jsx', '.mjs', '.json'],
           moduleDirectory: ['node_modules', 'app']
         }
       },
-      next: {
-        rootDir: '.'
-      }
+      next: { rootDir: '.' }
+    }
+  },
+
+  // React, Hooks, Accessibility & Tailwind rules
+  {
+    files: ['**/*.{js,jsx}'],
+    plugins: {
+      react,
+      'react-hooks': reactHooks,
+      'jsx-a11y': jsxA11y,
+      tailwindcss
     },
     rules: {
+      ...react.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      ...jsxA11y.configs.recommended.rules,
+      ...tailwindcss.configs.recommended.rules,
+
       // React rules
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'react/jsx-uses-react': 'off',
       'react/jsx-uses-vars': 'error',
       'react/jsx-key': ['error', { checkFragmentShorthand: true }],
-      'react/jsx-no-duplicate-props': 'error',
-      'react/jsx-no-undef': 'error',
-      'react/jsx-pascal-case': 'error',
-      'react/no-children-prop': 'error',
-      'react/no-danger-with-children': 'error',
-      'react/no-deprecated': 'warn',
-      'react/no-direct-mutation-state': 'error',
-      'react/no-find-dom-node': 'error',
-      'react/no-is-mounted': 'error',
-      'react/no-render-return-value': 'error',
-      'react/no-string-refs': 'error',
       'react/no-unescaped-entities': 'warn',
-      'react/no-unknown-property': 'error',
-      'react/require-render-return': 'error',
-      'react/display-name': 'off',
 
-      // React Hooks rules
+      // Hooks
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
 
-      // Next.js specific rules
-      '@next/next/no-html-link-for-pages': 'error',
-      '@next/next/no-img-element': 'warn',
-      '@next/next/no-unwanted-polyfillio': 'error',
-      '@next/next/no-page-custom-font': 'error',
+      // Accessibility
+      'jsx-a11y/alt-text': 'warn',
+      'jsx-a11y/aria-props': 'warn',
+      'jsx-a11y/aria-proptypes': 'warn',
+      'jsx-a11y/aria-unsupported-elements': 'warn',
+      'jsx-a11y/role-has-required-aria-props': 'warn',
+      'jsx-a11y/role-supports-aria-props': 'warn',
+
+      // Tailwind
+      'tailwindcss/classnames-order': 'warn',
+      'tailwindcss/no-custom-classname': 'off',
+      'tailwindcss/no-contradicting-classname': 'error',
 
       // General JavaScript rules
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
       'no-debugger': 'error',
       'no-unused-vars': [
-        'error',
+        'warn',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
@@ -124,19 +126,13 @@ export default [
         }
       ],
       'no-var': 'error',
-      'prefer-const': 'error',
+      'prefer-const': 'warn',
       'prefer-arrow-callback': 'error',
       'arrow-spacing': 'error',
       'no-duplicate-imports': 'error',
       'no-useless-rename': 'error',
       'object-shorthand': 'error',
-      'prefer-destructuring': [
-        'error',
-        {
-          array: false,
-          object: true
-        }
-      ],
+      'prefer-destructuring': ['error', { array: false, object: true }],
       'prefer-template': 'error',
       'template-curly-spacing': 'error',
       'no-trailing-spaces': 'error',
@@ -146,11 +142,49 @@ export default [
       quotes: [
         'error',
         'single',
-        {
-          avoidEscape: true,
-          allowTemplateLiterals: true
-        }
+        { avoidEscape: true, allowTemplateLiterals: true }
       ]
     }
-  }
+  },
+
+  // Test files configuration (Jest)
+  {
+    files: ['**/*.{test,spec}.{js,jsx}', '**/__tests__/**/*.{js,jsx}'],
+    plugins: { jest },
+    languageOptions: {
+      globals: { ...globals.jest }
+    },
+    rules: {
+      ...jest.configs.recommended.rules,
+      'jest/prefer-expect-assertions': 'off',
+      'jest/no-disabled-tests': 'warn',
+      'jest/no-focused-tests': 'error',
+      'jest/no-identical-title': 'error',
+      'jest/valid-expect': 'error'
+    }
+  },
+
+  // E2E test files configuration (Playwright)
+  {
+    files: ['e2e/**/*.{js,ts}', '**/*.e2e.{js,ts}'],
+    plugins: { playwright },
+    rules: { ...playwright.configs.recommended.rules }
+  },
+
+  // Config files (Node.js env)
+  {
+    files: [
+      'next.config.js',
+      'jest.config.js',
+      'playwright.config.js',
+      'tailwind.config.js',
+      'postcss.config.js'
+    ],
+    languageOptions: {
+      globals: { ...globals.node }
+    }
+  },
+
+  // Prettier (must be last to override conflicting rules)
+  prettier
 ];
