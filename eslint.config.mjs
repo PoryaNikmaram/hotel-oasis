@@ -1,16 +1,16 @@
-import js from '@eslint/js';
 import { FlatCompat } from '@eslint/eslintrc';
-import { fileURLToPath } from 'url';
-import path from 'path';
+import js from '@eslint/js';
 import globals from 'globals';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+import prettier from 'eslint-config-prettier';
+import jest from 'eslint-plugin-jest';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import playwright from 'eslint-plugin-playwright';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
 import tailwindcss from 'eslint-plugin-tailwindcss';
-import jest from 'eslint-plugin-jest';
-import playwright from 'eslint-plugin-playwright';
-import prettier from 'eslint-config-prettier';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +36,8 @@ export default [
       '*.log',
       '*.config.js',
       '*.config.mjs',
-      '*.config.ts'
+      '*.config.ts',
+      'jest.setup.js'
     ]
   },
 
