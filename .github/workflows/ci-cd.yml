@@ -362,64 +362,64 @@ jobs:
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
   # ============================================
-# Job 6: Deploy to Staging/Production
-# ============================================
-deploy:
-  name: 🚀 Deploy
-  runs-on: ubuntu-latest
-  timeout-minutes: 15
-  needs: [build, docker]
-  if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+  # Job 6: Deploy to Staging/Production
+  # ============================================
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build, docker]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
 
-  environment:
-    name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
-    url: ${{ steps.deploy.outputs.url }}
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+      url: ${{ steps.deploy.outputs.url }}
 
-  env:
-    VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
-  steps:
-    # Step 1: Checkout code
-    - name: 📥 Checkout Repository
-      uses: actions/checkout@v4
+    steps:
+      # Step 1: Checkout code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
 
-    # Step 2: Download build artifacts
-    - name: 📥 Download Build Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifacts
+      # Step 2: Download build artifacts
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
 
-    # Step 3: Deploy to Vercel
-    - name: 🚀 Deploy to Vercel
-      id: deploy
-      uses: amondnet/vercel-action@v25
-      with:
-        vercel-token: ${{ env.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        vercel-args: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
-        scope: ${{ secrets.VERCEL_ORG_ID }}
-      if: env.VERCEL_TOKEN != ''
+      # Step 3: Deploy to Vercel
+      - name: 🚀 Deploy to Vercel
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ env.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+        if: env.VERCEL_TOKEN != ''
 
-    # Step 4: Comment deployment URL on PR
-    - name: 💬 Comment on PR
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '🚀 Deployment Preview: ${{ steps.deploy.outputs.url }}'
-          })
+      # Step 4: Comment deployment URL on PR
+      - name: 💬 Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Deployment Preview: ${{ steps.deploy.outputs.url }}'
+            })
 
-    # Step 5: Send deployment notification (optional)
-    - name: 📢 Send Notification
-      if: always()
-      run: |
-        echo "Deployment status: ${{ job.status }}"
-        # Add Slack/Discord/Email notification here
+      # Step 5: Send deployment notification (optional)
+      - name: 📢 Send Notification
+        if: always()
+        run: |
+          echo "Deployment status: ${{ job.status }}"
+          # Add Slack/Discord/Email notification here
 
   # ============================================
   # Job 7: Performance & Lighthouse Tests
