@@ -16,12 +16,17 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
+# Cache files
+.eslintcache
+.turbo
+
+# Coverage and test reports
+coverage
+playwright-report
+test-results
+
 # Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
 
 # Logs
 *.log
@@ -30,4 +35,5 @@ pnpm-lock.yaml
 .DS_Store
 *.tsbuildinfo
 .cache/
+Thumbs.db
 .parcel-cache/

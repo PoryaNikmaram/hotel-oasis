@@ -23,16 +23,18 @@ export default function Page() {
 
       <form className='flex flex-col gap-6 bg-primary-900 px-12 py-8 text-lg'>
         <div className='space-y-2'>
-          <label>Full name</label>
+          <label htmlFor='fullName'>Full name</label>
           <input
+            id='fullName'
             disabled
             className='w-full rounded-sm bg-primary-200 px-5 py-3 text-primary-800 shadow-sm disabled:cursor-not-allowed disabled:bg-gray-600 disabled:text-gray-400'
           />
         </div>
 
         <div className='space-y-2'>
-          <label>Email address</label>
+          <label htmlFor='emailAddress'>Email address</label>
           <input
+            id='emailAddress'
             disabled
             className='w-full rounded-sm bg-primary-200 px-5 py-3 text-primary-800 shadow-sm disabled:cursor-not-allowed disabled:bg-gray-600 disabled:text-gray-400'
           />

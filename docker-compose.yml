@@ -1,0 +1,100 @@
+# Docker Compose for Development Environment
+version: '3.8'
+
+services:
+  # ================================
+  # Next.js Application
+  # ================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        - NODE_ENV=development
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: wild-oasis-app
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    volumes:
+      # Mount source code for development
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - redis
+    networks:
+      - wild-oasis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3000 || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ================================
+  # Redis for Caching (Optional)
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: wild-oasis-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --replica-read-only no
+    networks:
+      - wild-oasis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 3s
+      retries: 5
+
+  # ================================
+  # Database (if not using Supabase)
+  # Uncomment if you want local PostgreSQL
+  # ================================
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: wild-oasis-db
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_DB: wild_oasis
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   networks:
+  #     - wild-oasis-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+
+# ================================
+# Volumes
+# ================================
+volumes:
+  redis_data:
+    driver: local
+  # postgres_data:
+  #   driver: local
+
+# ================================
+# Networks
+# ================================
+networks:
+  wild-oasis-network:
+    driver: bridge

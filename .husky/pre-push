@@ -18,4 +18,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "🔍 Checking for files larger than 100MB..."
+
+large_files=$(git diff --cached --name-only | xargs -I {} bash -c 'if [ -f "{}" ]; then du -m "{}" | awk "$1 > 100 { print \$2 }"; fi')
+
+if [ -n "$large_files" ]; then
+  echo "🚫 Push blocked! These files are larger than 100MB:"
+  echo "$large_files"
+  exit 1
+fi
+
 echo "✅ Pre-push checks passed!"

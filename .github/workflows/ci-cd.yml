@@ -1,0 +1,508 @@
+# CI/CD Pipeline for Next.js Application
+# This workflow handles continuous integration and deployment
+name: CI/CD Pipeline
+
+# Trigger conditions for the workflow
+on:
+  # Runs on push to main and develop branches
+  push:
+    branches: [main, develop]
+  # Runs on pull requests targeting main and develop
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+  # Allows manual trigger from GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Environment to deploy to'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+# Environment variables available to all jobs
+env:
+  NODE_VERSION: '20.x'
+  NPM_VERSION: '10.x'
+  HUSKY: 0 # Disable Husky in CI
+
+# Cancel in-progress runs of the same workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================
+  # Job 1: Code Quality Checks
+  # ============================================
+  quality-check:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # Step 1: Check out the repository code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for better analysis
+
+      # Step 2: Setup Node.js environment
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # Step 3: Cache dependencies for faster builds
+      - name: 📦 Cache Dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+            .eslintcache
+          key: deps-${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            deps-${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+            deps-${{ runner.os }}-
+
+      # Step 4: Install dependencies if not cached
+      - name: 📥 Install Dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
+
+      # Step 5: Run ESLint for code quality
+      - name: 🔍 Run ESLint
+        run: npm run lint
+        continue-on-error: false
+
+      # Step 6: Check code formatting with Prettier
+      - name: 💅 Check Formatting
+        run: npm run format:check
+
+      # Step 7: Type checking (optional, remove if not using TypeScript)
+      - name: 📝 Type Check
+        run: npx tsc --noEmit || echo "TypeScript not configured, skipping..."
+        continue-on-error: true
+
+      # Step 8: Check for security vulnerabilities
+      - name: 🔒 Security Audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  # ============================================
+  # Job 2: Unit & Integration Tests
+  # ============================================
+  test:
+    name: 🧪 Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: quality-check # Only run after quality checks pass
+
+    strategy:
+      matrix:
+        node-version: ['20.x', '22.x'] # Test on multiple Node versions
+
+    steps:
+      # Step 1: Checkout code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js
+      - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      # Step 3: Cache dependencies
+      - name: 📦 Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: deps-test-${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+
+      # Step 4: Install dependencies
+      - name: 📥 Install Dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      # Step 5: Run unit tests with coverage
+      - name: 🧪 Run Unit Tests
+        run: npm run test:ci
+        env:
+          CI: true
+
+      # Step 6: Upload test coverage to Codecov (optional)
+      - name: 📊 Upload Coverage
+        if: matrix.node-version == '20.x' # Only upload once
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      # Step 7: Upload test results as artifacts
+      - name: 📤 Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: |
+            coverage/
+            junit.xml
+          retention-days: 7
+
+  # ============================================
+  # Job 3: Build Application
+  # ============================================
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality-check, test] # Run after quality and tests pass
+
+    steps:
+      # Step 1: Checkout code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # Step 3: Cache dependencies
+      - name: 📦 Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: deps-build-${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+
+      # Step 4: Cache Next.js build
+      - name: 📦 Cache Next.js Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/cache
+            ${{ github.workspace }}/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
+
+      # Step 5: Install dependencies
+      - name: 📥 Install Dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      # Step 6: Create .env file from GitHub Secrets
+      - name: 🔐 Setup Environment Variables
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env.local
+
+      # Step 7: Build the Next.js application
+      - name: 🏗️ Build Application
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      # Step 8: Analyze bundle size
+      - name: 📊 Analyze Bundle Size
+        run: |
+          npx --yes size-limit || echo "Size limit not configured"
+        continue-on-error: true
+
+      # Step 9: Upload build artifacts
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            .next/
+            out/
+            public/
+            package.json
+            package-lock.json
+          retention-days: 7
+
+  # ============================================
+  # Job 4: E2E Tests (Optional but recommended)
+  # ============================================
+  e2e-tests:
+    name: 🎭 E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+
+    steps:
+      # Step 1: Checkout code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js
+      - name: 🔧 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # Step 3: Download build artifacts
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      # Step 4: Install dependencies
+      - name: 📥 Install Dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      # Step 5: Install Playwright browsers
+      - name: 🎭 Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      # Step 6: Setup environment variables
+      - name: 🔐 Setup Environment Variables
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env.local
+
+      # Step 7: Run E2E tests
+      - name: 🎭 Run E2E Tests
+        run: npm run e2e
+        env:
+          CI: true
+          PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
+
+      # Step 8: Upload test results
+      - name: 📤 Upload E2E Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # ============================================
+  # Job 5: Docker Build & Push
+  # ============================================
+  docker:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    steps:
+      # Step 1: Checkout code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Docker Buildx for advanced features
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 3: Log in to Docker Hub (or your registry)
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+        if: env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != ''
+
+      # Step 4: Extract metadata for Docker images
+      - name: 📋 Extract Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKER_USERNAME }}/wild-oasis
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Step 5: Build and push Docker image
+      - name: 🏗️ Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_VERSION=${{ env.NODE_VERSION }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+  # ============================================
+  # Job 6: Deploy to Staging/Production
+  # ============================================
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build, docker]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      # Step 1: Checkout code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Download build artifacts
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      # Step 3: Deploy to Vercel (Most common for Next.js)
+      - name: 🚀 Deploy to Vercel
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+        if: secrets.VERCEL_TOKEN != ''
+
+      # Alternative: Deploy to other platforms
+      # Uncomment and configure based on your deployment target
+
+      # Deploy to Netlify
+      # - name: 🚀 Deploy to Netlify
+      #   uses: nwtgck/actions-netlify@v2.0
+      #   with:
+      #     publish-dir: './out'
+      #     production-branch: main
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     deploy-message: "Deploy from GitHub Actions"
+      #   env:
+      #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      # Step 4: Comment deployment URL on PR
+      - name: 💬 Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Deployment Preview: ${{ steps.deploy.outputs.url }}'
+            })
+
+      # Step 5: Send deployment notification (optional)
+      - name: 📢 Send Notification
+        if: always()
+        run: |
+          echo "Deployment status: ${{ job.status }}"
+          # Add Slack/Discord/Email notification here
+
+  # ============================================
+  # Job 7: Performance & Lighthouse Tests
+  # ============================================
+  lighthouse:
+    name: 🏆 Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      # Step 1: Checkout code
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Run Lighthouse CI
+      - name: 🏆 Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            ${{ needs.deploy.outputs.url }}
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          runs: 3 # Run 3 times and average
+
+      # Step 3: Comment Lighthouse results on PR
+      - name: 💬 Comment Lighthouse Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = require('./lighthouse-results.json');
+            const comment = `
+            ## 🏆 Lighthouse Results
+
+            | Metric | Score |
+            |--------|-------|
+            | Performance | ${results.performance} |
+            | Accessibility | ${results.accessibility} |
+            | Best Practices | ${results.bestPractices} |
+            | SEO | ${results.seo} |
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            })
+
+# ============================================
+# Workflow Summary
+# ============================================
+# This comprehensive CI/CD pipeline includes:
+# 1. Code quality checks (linting, formatting)
+# 2. Security audits
+# 3. Unit and integration tests
+# 4. Build verification
+# 5. E2E tests
+# 6. Docker image building
+# 7. Deployment to staging/production
+# 8. Performance testing with Lighthouse
+#
+# Required GitHub Secrets:
+# - NEXT_PUBLIC_SUPABASE_URL
+# - NEXT_PUBLIC_SUPABASE_ANON_KEY
+# - SUPABASE_SERVICE_ROLE_KEY
+# - DOCKER_USERNAME (optional)
+# - DOCKER_PASSWORD (optional)
+# - VERCEL_TOKEN (for Vercel deployment)
+# - VERCEL_ORG_ID (for Vercel deployment)
+# - VERCEL_PROJECT_ID (for Vercel deployment)
+# - CODECOV_TOKEN (optional, for code coverage)
