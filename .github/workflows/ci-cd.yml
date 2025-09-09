@@ -361,7 +361,7 @@ jobs:
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-  # ============================================
+    # ============================================
   # Job 6: Deploy to Staging/Production
   # ============================================
   deploy:
@@ -370,6 +370,9 @@ jobs:
     timeout-minutes: 15
     needs: [build, docker]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    env:
+      HAS_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
@@ -389,6 +392,7 @@ jobs:
       # Step 3: Deploy to Vercel (Most common for Next.js)
       - name: 🚀 Deploy to Vercel
         id: deploy
+        if: env.HAS_VERCEL_TOKEN != ''
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -396,22 +400,6 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
           scope: ${{ secrets.VERCEL_ORG_ID }}
-        if: secrets.VERCEL_TOKEN != ''
-
-      # Alternative: Deploy to other platforms
-      # Uncomment and configure based on your deployment target
-
-      # Deploy to Netlify
-      # - name: 🚀 Deploy to Netlify
-      #   uses: nwtgck/actions-netlify@v2.0
-      #   with:
-      #     publish-dir: './out'
-      #     production-branch: main
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     deploy-message: "Deploy from GitHub Actions"
-      #   env:
-      #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
 
       # Step 4: Comment deployment URL on PR
       - name: 💬 Comment on PR
