@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import Image from 'next/image';
 
+import Link from 'next/link';
 import image1 from '../../public/about-1.jpg';
 
 export default function About() {
@@ -78,12 +79,12 @@ export default function About() {
             </p>
 
             <div>
-              <a
+              <Link
                 href='/cabins'
                 className='mt-4 inline-block bg-accent-500 px-8 py-5 text-lg font-semibold text-primary-800 transition-all hover:bg-accent-600'
               >
                 Explore our luxury cabins
-              </a>
+              </Link>
             </div>
           </div>
         </div>
