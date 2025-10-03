@@ -41,16 +41,6 @@ Name: VERCEL_PROJECT_ID
 Value: (Get from your Vercel project settings)
 ```
 
-##### For Docker Hub (Optional):
-
-```
-Name: DOCKER_USERNAME
-Value: (Your Docker Hub username)
-
-Name: DOCKER_PASSWORD
-Value: (Your Docker Hub password or access token)
-```
-
 ##### For Code Coverage (Optional):
 
 ```
@@ -102,7 +92,6 @@ node_modules/
 
 # Testing
 coverage/
-playwright-report/
 test-results/
 
 # Cache files

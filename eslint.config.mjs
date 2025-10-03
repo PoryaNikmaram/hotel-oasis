@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url';
 import prettier from 'eslint-config-prettier';
 import jest from 'eslint-plugin-jest';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
-import playwright from 'eslint-plugin-playwright';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tailwindcss from 'eslint-plugin-tailwindcss';
@@ -30,7 +29,6 @@ export default [
       'dist/**',
       'node_modules/**',
       'coverage/**',
-      'playwright-report/**',
       'test-results/**',
       '.eslintcache',
       '*.log',
@@ -165,19 +163,11 @@ export default [
     }
   },
 
-  // E2E test files configuration (Playwright)
-  {
-    files: ['e2e/**/*.{js,ts}', '**/*.e2e.{js,ts}'],
-    plugins: { playwright },
-    rules: { ...playwright.configs.recommended.rules }
-  },
-
   // Config files (Node.js env)
   {
     files: [
       'next.config.js',
       'jest.config.js',
-      'playwright.config.js',
       'tailwind.config.js',
       'postcss.config.js'
     ],

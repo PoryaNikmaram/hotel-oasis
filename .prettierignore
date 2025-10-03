@@ -22,7 +22,6 @@ pnpm-lock.yaml
 
 # Coverage and test reports
 coverage
-playwright-report
 test-results
 
 # Environment files

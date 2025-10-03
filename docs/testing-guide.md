@@ -1,28 +1,19 @@
-# Testing Guide for Wild Oasis Project
+# Testing Guide for Wild Oasis
 
 ## Overview
 
-This project uses a comprehensive testing strategy with multiple layers:
-
-- **Unit Tests**: Jest + React Testing Library
-- **E2E Tests**: Playwright
-- **Component Testing**: React Testing Library
-- **API Testing**: Jest + Supertest (optional)
+This project uses Jest and React Testing Library for comprehensive unit and component testing.
 
 ## 🧪 Testing Stack
 
-### Primary Tools
-
 - **Jest**: Test runner and assertion library
-- **React Testing Library**: React component testing
-- **Playwright**: End-to-end browser testing
-- **@testing-library/jest-dom**: Additional Jest matchers
+- **React Testing Library**: Component testing focused on user behavior
+- **@testing-library/jest-dom**: Additional Jest matchers for DOM assertions
 
 ### Why These Tools?
 
-1. **Jest**: Industry standard, great ecosystem, built-in mocking
-2. **React Testing Library**: Encourages testing best practices, focuses on user behavior
-3. **Playwright**: Modern E2E testing, supports multiple browsers, great debugging
+- **Jest**: Industry standard, excellent ecosystem, built-in mocking capabilities
+- **React Testing Library**: Encourages testing best practices by focusing on user interactions rather than implementation details
 
 ## 📁 Project Structure
 
@@ -34,56 +25,32 @@ project-root/
 │   ├── components/
 │   │   └── __tests__/         # Component tests
 │   ├── lib/
-│   │   └── __tests__/         # Utility function tests
+│   │   └── __tests__/         # Utility tests
 │   └── hooks/
-│       └── __tests__/         # Custom hook tests
-├── e2e/                       # Playwright E2E tests
-│   ├── auth/                  # Auth setup files
-│   ├── fixtures/              # Test data
-│   └── *.spec.js              # Test files
+│       └── __tests__/         # Hook tests
 ├── jest.config.js             # Jest configuration
-├── jest.setup.js              # Jest setup file
-└── playwright.config.js       # Playwright configuration
+└── jest.setup.js              # Jest setup file
 ```
 
-## 🚀 Getting Started
-
-### Installation
-
-The testing dependencies are already included in package.json. Run:
+## 🚀 Running Tests
 
 ```bash
-npm install
-```
-
-### Running Tests
-
-```bash
-# Run all unit tests
+# Run all tests
 npm run test
 
-# Run tests in watch mode (development)
+# Watch mode (development)
 npm run test:watch
 
-# Run tests with coverage
+# With coverage report
 npm run test:coverage
 
-# Run tests for CI/CD (no watch, with coverage)
+# CI mode (no watch, with coverage)
 npm run test:ci
-
-# Run E2E tests
-npm run e2e
-
-# Run E2E tests with UI mode (visual debugging)
-npm run e2e:ui
-
-# Run E2E tests in headed mode (see browser)
-npm run e2e:headed
 ```
 
-## 📝 Writing Unit Tests
+## 📝 Writing Tests
 
-### Basic Component Test Structure
+### Basic Component Test
 
 ```javascript
 import { render, screen } from '@testing-library/react';
@@ -94,7 +61,6 @@ describe('MyComponent', () => {
   it('should render correctly', () => {
     render(<MyComponent prop='value' />);
 
-    // Test what users see/do
     expect(screen.getByText('Expected Text')).toBeInTheDocument();
   });
 
@@ -115,35 +81,36 @@ describe('MyComponent', () => {
 
 #### ✅ DO:
 
-- Test behavior, not implementation details
+- Test user behavior, not implementation
 - Use semantic queries (`getByRole`, `getByLabelText`, `getByText`)
-- Test user interactions
-- Mock external dependencies
+- Test user interactions and outcomes
+- Mock external dependencies (APIs, databases)
 - Write descriptive test names
 - Group related tests with `describe`
-- Use `screen` for queries
 - Test error states and edge cases
 
 #### ❌ DON'T:
 
 - Test internal component state
-- Use implementation-specific selectors (class names, data-testid unless necessary)
+- Use implementation-specific selectors (class names)
 - Test every possible prop combination
 - Write overly complex tests
-- Mock everything (mock what you need)
+- Mock everything unnecessarily
 
-### Query Priority (React Testing Library)
+### Query Priority
 
-1. **getByRole**: Most accessible way to find elements
-2. **getByLabelText**: Form elements with labels
-3. **getByPlaceholderText**: Form inputs with placeholders
-4. **getByText**: Non-interactive text content
-5. **getByDisplayValue**: Form elements with values
-6. **getByAltText**: Images with alt text
-7. **getByTitle**: Elements with title attribute
-8. **getByTestId**: Last resort, use data-testid
+Use queries in this order of preference:
 
-### Example: Testing the CabinCard Component
+1. **getByRole** - Most accessible (buttons, links, inputs)
+2. **getByLabelText** - Form fields with labels
+3. **getByPlaceholderText** - Form inputs with placeholders
+4. **getByText** - Text content
+5. **getByDisplayValue** - Form elements with current values
+6. **getByAltText** - Images with alt text
+7. **getByTitle** - Elements with title attribute
+8. **getByTestId** - Last resort (use `data-testid`)
+
+### Example: CabinCard Component Test
 
 ```javascript
 import { render, screen } from '@testing-library/react';
@@ -159,14 +126,12 @@ describe('CabinCard', () => {
     image: '/cabin.jpg'
   };
 
-  it('should display cabin information correctly', () => {
+  it('should display cabin information', () => {
     render(<CabinCard cabin={mockCabin} />);
 
-    // Test visible content
     expect(screen.getByText('Cabin Luxury Cabin')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
-    expect(screen.getByText('$250')).toBeInTheDocument(); // After discount
-    expect(screen.getByText('$300')).toHaveClass('line-through');
+    expect(screen.getByText('$250')).toBeInTheDocument();
   });
 
   it('should have accessible image', () => {
@@ -176,7 +141,7 @@ describe('CabinCard', () => {
     expect(image).toHaveAttribute('alt', 'Cabin Luxury Cabin');
   });
 
-  it('should have correct reservation link', () => {
+  it('should link to correct reservation page', () => {
     render(<CabinCard cabin={mockCabin} />);
 
     const link = screen.getByRole('link', { name: /details & reservation/i });
@@ -185,53 +150,6 @@ describe('CabinCard', () => {
 });
 ```
 
-## 🎭 Writing E2E Tests
-
-### Basic E2E Test Structure
-
-```javascript
-import { test, expect } from '@playwright/test';
-
-test.describe('Feature Name', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
-  test('should perform user journey', async ({ page }) => {
-    // Navigate and interact
-    await page.click('text=Cabins');
-    await expect(page.locator('h1')).toContainText('Our Cabins');
-
-    // Test specific functionality
-    await page.fill('[data-testid="search"]', 'luxury');
-    await page.press('[data-testid="search"]', 'Enter');
-
-    // Verify results
-    await expect(page.locator('[data-testid="cabin-card"]')).toHaveCount({
-      gte: 1
-    });
-  });
-});
-```
-
-### E2E Testing Best Practices
-
-#### ✅ DO:
-
-- Test critical user journeys
-- Use page object models for complex pages
-- Test on multiple browsers/devices
-- Use meaningful waits (`waitForSelector`, not `waitForTimeout`)
-- Test realistic user scenarios
-- Include accessibility testing
-
-#### ❌ DON'T:
-
-- Test every possible scenario in E2E (unit tests are faster)
-- Use hardcoded waits
-- Test implementation details
-- Make tests dependent on each other
-
 ## 🔧 Testing Configuration
 
 ### Jest Configuration Highlights
@@ -239,24 +157,23 @@ test.describe('Feature Name', () => {
 - **testEnvironment**: `jsdom` for DOM testing
 - **setupFilesAfterEnv**: Loads jest-dom matchers
 - **moduleNameMapper**: Handles CSS and asset imports
-- **collectCoverageFrom**: Defines what files to include in coverage
-- **coverageThresholds**: Minimum coverage requirements
+- **collectCoverageFrom**: Defines coverage scope
+- **coverageThresholds**: Minimum coverage requirements (60%)
 
 ### Coverage Thresholds
 
-Current thresholds (adjust based on your needs):
+Current requirements:
 
-- **Branches**: 60%
-- **Functions**: 60%
-- **Lines**: 60%
-- **Statements**: 60%
+- Branches: 60%
+- Functions: 60%
+- Lines: 60%
+- Statements: 60%
 
-## 🛠 Debugging Tests
+## 🛠️ Debugging Tests
 
-### Unit Test Debugging
+### Console Debugging
 
 ```javascript
-// Add console.log to see what's rendered
 import { render, screen, logRoles, prettyDOM } from '@testing-library/react';
 
 test('debug example', () => {
@@ -273,22 +190,6 @@ test('debug example', () => {
 });
 ```
 
-### E2E Test Debugging
-
-```javascript
-test('debug e2e test', async ({ page }) => {
-  // Pause test execution
-  await page.pause();
-
-  // Take screenshot
-  await page.screenshot({ path: 'debug.png' });
-
-  // Get page content
-  const content = await page.content();
-  console.log(content);
-});
-```
-
 ### VS Code Integration
 
 Add to `.vscode/settings.json`:
@@ -301,17 +202,11 @@ Add to `.vscode/settings.json`:
 }
 ```
 
-## 📊 Test Reports
+## 📊 Coverage Reports
 
-### Coverage Reports
+After running `npm run test:coverage`, open `coverage/lcov-report/index.html` in your browser to view detailed coverage reports.
 
-After running `npm run test:coverage`, open `coverage/lcov-report/index.html`
-
-### E2E Reports
-
-After E2E tests, open `playwright-report/index.html`
-
-## 🚨 Common Testing Pitfalls
+## 🚨 Common Pitfalls
 
 ### 1. Testing Implementation Details
 
@@ -359,30 +254,20 @@ await waitFor(() => {
 });
 ```
 
-## 📚 Learning Resources
+## 🎓 Learning Resources
 
 ### Documentation
 
 - [Jest Documentation](https://jestjs.io/docs/getting-started)
 - [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
-- [Playwright Documentation](https://playwright.dev/)
-
-### Best Practices Articles
-
-- [Common Mistakes with React Testing Library](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
-- [Testing Implementation Details](https://kentcdodds.com/blog/testing-implementation-details)
-
-### Video Tutorials
-
-- [React Testing Library Course by Kent C. Dodds](https://testingjavascript.com/)
-- [Playwright Tutorial Series](https://www.youtube.com/playlist?list=PLYDwWPRvXB8-yfPiGY_R7R5Q8p6ks-Kov)
+- [Common Mistakes with RTL](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
 
 ## 🎯 Testing Checklist
 
 ### Before Writing Tests
 
-- [ ] Understand the user requirements
-- [ ] Identify critical user journeys
+- [ ] Understand user requirements
+- [ ] Identify critical user flows
 - [ ] Plan test coverage strategy
 
 ### While Writing Tests
@@ -390,28 +275,34 @@ await waitFor(() => {
 - [ ] Use descriptive test names
 - [ ] Test behavior, not implementation
 - [ ] Mock external dependencies
-- [ ] Include edge cases and error scenarios
-- [ ] Write readable and maintainable tests
+- [ ] Include edge cases
+- [ ] Write maintainable tests
 
 ### After Writing Tests
 
 - [ ] Run tests locally
 - [ ] Check coverage reports
-- [ ] Update documentation if needed
-- [ ] Review with team members
+- [ ] Review test quality
+- [ ] Update documentation
 
-## 📈 Advanced Topics
+## 🔬 Advanced Topics
 
 ### Mocking Supabase
 
 ```javascript
-// In jest.setup.js
+// In jest.setup.js or __mocks__/@supabase/supabase-js.js
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({
     from: jest.fn(() => ({
       select: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      insert: jest.fn(() => Promise.resolve({ data: null, error: null }))
-    }))
+      insert: jest.fn(() => Promise.resolve({ data: null, error: null })),
+      update: jest.fn(() => Promise.resolve({ data: null, error: null })),
+      delete: jest.fn(() => Promise.resolve({ data: null, error: null }))
+    })),
+    auth: {
+      signIn: jest.fn(() => Promise.resolve({ user: null, error: null })),
+      signOut: jest.fn(() => Promise.resolve({ error: null }))
+    }
   }))
 }));
 ```
@@ -428,27 +319,104 @@ export function renderWithProviders(ui, options = {}) {
 
   return render(ui, { wrapper, ...options });
 }
+
+// Usage in tests
+import { renderWithProviders } from '../__tests__/utils';
+
+test('component with context', () => {
+  renderWithProviders(<MyComponent />);
+  // Your assertions
+});
 ```
 
-### Performance Testing
+### Testing Async Components
 
 ```javascript
-test('component renders within performance budget', () => {
-  const startTime = performance.now();
-  render(<ExpensiveComponent />);
-  const endTime = performance.now();
+import { render, screen, waitFor } from '@testing-library/react';
 
-  expect(endTime - startTime).toBeLessThan(100); // 100ms budget
+test('async component loads data', async () => {
+  render(<AsyncComponent />);
+
+  // Check loading state
+  expect(screen.getByText('Loading...')).toBeInTheDocument();
+
+  // Wait for data to load
+  await waitFor(() => {
+    expect(screen.getByText('Data loaded')).toBeInTheDocument();
+  });
+});
+```
+
+### Testing Custom Hooks
+
+```javascript
+import { renderHook, waitFor } from '@testing-library/react';
+import { useCustomHook } from '../useCustomHook';
+
+test('custom hook returns expected value', () => {
+  const { result } = renderHook(() => useCustomHook());
+
+  expect(result.current.value).toBe('initial');
+});
+
+test('custom hook handles updates', async () => {
+  const { result } = renderHook(() => useCustomHook());
+
+  act(() => {
+    result.current.updateValue('new value');
+  });
+
+  await waitFor(() => {
+    expect(result.current.value).toBe('new value');
+  });
+});
+```
+
+### Testing Forms
+
+```javascript
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+test('form submission', async () => {
+  const user = userEvent.setup();
+  const mockSubmit = jest.fn();
+
+  render(<MyForm onSubmit={mockSubmit} />);
+
+  // Fill out form
+  await user.type(screen.getByLabelText('Name'), 'John Doe');
+  await user.type(screen.getByLabelText('Email'), 'john@example.com');
+
+  // Submit form
+  await user.click(screen.getByRole('button', { name: /submit/i }));
+
+  // Verify submission
+  expect(mockSubmit).toHaveBeenCalledWith({
+    name: 'John Doe',
+    email: 'john@example.com'
+  });
 });
 ```
 
 ## 🔄 CI/CD Integration
 
-Tests are automatically run in the GitHub Actions pipeline:
+Tests automatically run in GitHub Actions:
 
-- Unit tests run on every PR and push
-- E2E tests run on main branch and PRs
-- Coverage reports are uploaded to Codecov
-- Failed tests block deployments
+- ✅ Unit tests on every PR and push
+- ✅ Coverage reports generated
+- ✅ Failed tests block deployment
+- ✅ Coverage thresholds enforced
+
+## 💡 Tips for Writing Good Tests
+
+1. **Test user behavior**: Focus on what users see and do, not implementation
+2. **Keep tests simple**: One assertion per test when possible
+3. **Use descriptive names**: Test names should explain what's being tested
+4. **Avoid test interdependence**: Each test should run independently
+5. **Mock external dependencies**: APIs, databases, third-party services
+6. **Test edge cases**: Empty states, errors, loading states
+7. **Use accessibility queries**: Prefer `getByRole` and `getByLabelText`
+8. **Keep tests maintainable**: Refactor tests as you refactor code
 
 Happy Testing! 🚀
