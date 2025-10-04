@@ -2,8 +2,13 @@ import { getCabin, getCabins } from '@/app/_lib/data-service';
 import { EyeSlashIcon, MapPinIcon, UsersIcon } from '@heroicons/react/24/solid';
 import Image from 'next/image';
 
+// export const metadata = {
+//   title: "Cabin",
+// };
+
 export async function generateMetadata({ params }) {
-  const { name } = await getCabin(params.cabinId);
+  const { cabinId } = await params;
+  const { name } = await getCabin(cabinId);
   return { title: `Cabin ${name}` };
 }
 
@@ -16,7 +21,9 @@ export async function generateStaticParams() {
 }
 
 export default async function Page({ params }) {
-  const cabin = await getCabin(params.cabinId);
+  const pageParams = await params;
+
+  const cabin = await getCabin(pageParams.cabinId);
 
   const { id, name, maxCapacity, regularPrice, discount, image, description } =
     cabin;
@@ -44,14 +51,14 @@ export default async function Page({ params }) {
             <li className='flex items-center gap-3'>
               <UsersIcon className='size-5 text-primary-600' />
               <span className='text-lg'>
-                For up to <span className='font-bold'>{maxCapacity}</span>
+                For up to <span className='font-bold'>{maxCapacity}</span>{' '}
                 guests
               </span>
             </li>
             <li className='flex items-center gap-3'>
               <MapPinIcon className='size-5 text-primary-600' />
               <span className='text-lg'>
-                Located in the heart of the
+                Located in the heart of the{' '}
                 <span className='font-bold'>Dolomites</span> (Italy)
               </span>
             </li>
