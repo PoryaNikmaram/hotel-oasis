@@ -252,9 +252,8 @@ jobs:
     env:
       HAS_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
-    environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
-      url: ${{ steps.deploy.outputs.url }}
+    outputs:
+      url: ${{ steps.deploy.outputs.preview-url }}
 
     steps:
       # Step 1: Checkout code
@@ -267,7 +266,7 @@ jobs:
         with:
           name: build-artifacts
 
-      # Step 3: Deploy to Vercel (Most common for Next.js)
+      # Step 3: Deploy to Vercel
       - name: 🚀 Deploy to Vercel
         id: deploy
         if: env.HAS_VERCEL_TOKEN != ''
@@ -289,7 +288,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🚀 Deployment Preview: ${{ steps.deploy.outputs.url }}'
+              body: '🚀 Deployment Preview: ${{ steps.deploy.outputs.preview-url }}'
             })
 
       # Step 5: Send deployment notification (optional)
@@ -334,12 +333,12 @@ jobs:
             const comment = `
             ## 🏆 Lighthouse Results
 
-            | Metric | Score |
-            |--------|-------|
-            | Performance | ${results.performance} |
+            | Metric        | Score |
+            |---------------|-------|
+            | Performance   | ${results.performance} |
             | Accessibility | ${results.accessibility} |
-            | Best Practices | ${results.bestPractices} |
-            | SEO | ${results.seo} |
+            | Best Practices| ${results.bestPractices} |
+            | SEO           | ${results.seo} |
             `;
 
             github.rest.issues.createComment({
