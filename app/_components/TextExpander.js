@@ -1,11 +1,19 @@
+// app/_components/TextExpander.js
 import { useState } from 'react';
 
 function TextExpander({ children }) {
+  const words = children.split(' ');
+  const needsExpansion = words.length > 40;
+
   const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!needsExpansion) {
+    return <span>{children}</span>;
+  }
 
   const displayText = isExpanded
     ? children
-    : `${children.split(' ').slice(0, 40).join(' ')}...`;
+    : `${words.slice(0, 40).join(' ')}...`;
 
   return (
     <span>
