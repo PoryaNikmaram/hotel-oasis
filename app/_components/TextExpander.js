@@ -1,4 +1,4 @@
-// app/_components/TextExpander.js
+'use client';
 import { useState } from 'react';
 
 function TextExpander({ children }) {
